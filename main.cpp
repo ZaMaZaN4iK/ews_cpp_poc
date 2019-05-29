@@ -11,10 +11,12 @@ int main() {
     ews::set_up();
 
     try {
-        const auto basicCreds = ews::basic_credentials("qa@inovwave1.onmicrosoft.com", "Xod25733");
+        const auto basicCreds = ews::oauth2_credentials("qa@inovwave1.onmicrosoft.com");
 
         auto service = ews::service("https://outlook.office365.com/ews/Exchange.asmx",
                                     basicCreds);
+        ews::connecting_sid imp(ews::connecting_sid::type::primary_smtp_address, "qa@inovwave1.onmicrosoft.com");
+        service.impersonate(imp);
 
         auto search_expression =
                 ews::contains(ews::item_property_path::subject, "150 MB",
@@ -28,14 +30,21 @@ int main() {
         {
             auto message = service.get_message(item);
             auto attachments = message.get_attachments();
+            std::cout << attachments.back().id().to_xml() << std::endl;
 
             /*for(const auto& attachment : attachments)
             {*/
                 //std::cout << attachments.back().content() << std::endl;
                 std::fstream attachment_file;
-                attachment_file.open("/home/zamazan4ik/OpenSource/ews_cpp_poc/attach.txt", std::ios_base::out);
+                attachment_file.open("/home/zamazan4ik/OpenSource/ews_cpp_poc/attach_new.txt", std::ios_base::out);
+
+                auto attachment = service.get_attachment(attachments.back().id());
                 attachment_file << service.get_attachment(attachments.back().id()).content();
                 attachment_file.close();
+
+                //auto new_attach = ews::attachment();
+                //auto new_attach = ews::attachment::from_file("/home/zamazan4ik/OpenSource/ews_cpp_poc/decoded.txt", "text", "log.txt");
+                //service.create_attachment(message.get_item_id(), new_attach);
             //}
 
         }

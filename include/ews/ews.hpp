@@ -24,6 +24,7 @@
 #include <fstream>
 #include <functional>
 #include <ios>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <stddef.h>
@@ -8131,6 +8132,17 @@ private:
     std::string domain_;
 };
 
+class oauth2_credentials : public internal::credentials
+{
+public:
+    oauth2_credentials(std::string token) : jwt_token(token) {}
+
+private:
+    void certify(internal::http_request* request) const override;
+
+    std::string jwt_token;
+};
+
 namespace internal
 {
     class http_request final
@@ -8291,6 +8303,15 @@ namespace internal
             set_option(CURLOPT_VERBOSE, 1L);
 #endif
 
+            auto list = headers_.get();
+
+            while(list != nullptr)
+            {
+                std::cout << list->data << std::endl;
+                list = list->next;
+            }
+
+            std::cout << request << std::endl << std::endl;
             // Set complete request string for HTTP POST method; note: no
             // encoding here
             set_option(CURLOPT_POSTFIELDS, request.c_str());
@@ -8299,6 +8320,10 @@ namespace internal
             // Finally, set HTTP headers. We do this as last action here
             // because we want to overwrite implicitly set header lines due
             // to the options set above with our own header lines
+
+            headers_.append("Authorization: Bearer eyJ0eXAiOiJKV1QiLCJub25jZSI6IkFRQUJBQUFBQUFEQ29NcGpKWHJ4VHE5Vkc5dGUtN0ZYczgtWE9JVl94QTJuTTJvblVobHNfa2g1T3plb0o0QkstbzV5dXc1VU1LeE1raDRNVV9NQmU2c29ncjBiY1ViS0lYWVNHeV9ibkVRTkhCT2hPWnlGcWlBQSIsImFsZyI6IlJTMjU2IiwieDV0IjoiSEJ4bDltQWU2Z3hhdkNrY29PVTJUSHNETmEwIiwia2lkIjoiSEJ4bDltQWU2Z3hhdkNrY29PVTJUSHNETmEwIn0.eyJhdWQiOiJodHRwczovL291dGxvb2sub2ZmaWNlLmNvbSIsImlzcyI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0LzU4ODljZTUyLWY4ZjAtNDBkZC04YWE2LWEyN2U5ZjQ1ZTkxMy8iLCJpYXQiOjE1NTkxMjYxMzcsIm5iZiI6MTU1OTEyNjEzNywiZXhwIjoxNTU5MTMwMDM3LCJhaW8iOiI0MlpnWU5DNEUrUEJ6YmRiWXlYbnF5WFZxV2VMQUE9PSIsImFwcF9kaXNwbGF5bmFtZSI6IkMyQ1NXIiwiYXBwaWQiOiI2YWQwZTFiZS1jM2U5LTQ4OTAtYWVkNi0yMDllMWY5YTk5MTAiLCJhcHBpZGFjciI6IjIiLCJpZHAiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC81ODg5Y2U1Mi1mOGYwLTQwZGQtOGFhNi1hMjdlOWY0NWU5MTMvIiwib2lkIjoiOWUwZjY1NjItZDIzZC00MDIwLWEwZjQtNmYwYTA2MzBlYjg1Iiwicm9sZXMiOlsiVXNlci5SZWFkLkFsbCIsImZ1bGxfYWNjZXNzX2FzX2FwcCIsIk1haWwuUmVhZFdyaXRlIiwiTWFpbGJveFNldHRpbmdzLlJlYWRXcml0ZSIsIlVzZXIuUmVhZEJhc2ljLkFsbCIsIk1haWxib3guTWlncmF0aW9uIiwiTWFpbC5SZWFkIl0sInNpZCI6IjFjOTU1M2ExLWQyYjMtNGY0Mi05Mzc1LTFkNmFjNDAxNzdmMSIsInN1YiI6IjllMGY2NTYyLWQyM2QtNDAyMC1hMGY0LTZmMGEwNjMwZWI4NSIsInRpZCI6IjU4ODljZTUyLWY4ZjAtNDBkZC04YWE2LWEyN2U5ZjQ1ZTkxMyIsInV0aSI6IkxWMlNoVFJORlVXeEdGa24yUnFwQUEiLCJ2ZXIiOiIxLjAifQ.h4vzMNpR_dOPVrRpbtmhJ2MQYqUp2EPyjEoFnONdWBRBapR4eJo9WxortPsMSc_bqlqnFxCQjmY7Q5qFOIejP5Hb-QRbjPzfDlL5BhgpbG4Y1M9T7ZB0NpkUKvznNhu3ZgsNcExWDy1y_Xum-n3ofpEXY5btSnXQD_rlA0gf_zoowp7vzUlsjU7CFKNdLYE2cuR9vx0wHEDD7QhBHByR6ChsYOXWvzYD0smAHTqTqUHhmsT-wsqK1soOrnvzH42AzIcg2Rs0blePB2X9cZ4QclxzgjXtjhvqEfv0CBBBg9d0wAFhMjV-NPy0jK7yCmEIYSjq_tTssfP7kml_yQGdyA");
+            headers_.append("X-AnchorMailbox: qa@inovwave1.onmicrosoft.com");
+
             set_option(CURLOPT_HTTPHEADER, headers_.get());
 
             std::vector<char> response_data;
@@ -22534,6 +22559,16 @@ inline void ntlm_credentials::certify(internal::http_request* request) const
         (domain_.empty() ? "" : domain_ + "\\") + username_ + ":" + password_;
     request->set_option(CURLOPT_USERPWD, login.c_str());
     request->set_option(CURLOPT_HTTPAUTH, CURLAUTH_NTLM);
+}
+
+inline void oauth2_credentials::certify(internal::http_request* request) const
+{
+    check(request, "Expected request, got nullptr");
+
+    // CURLOPT_USERPWD: domain\username:password
+    //request->
+    //request->set_option(CURLOPT_USERPWD, login.c_str());
+    //request->set_option(CURLOPT_HTTPAUTH, CURLAUTH_NTLM);
 }
 
 #ifndef EWS_DOXYGEN_SHOULD_SKIP_THIS
